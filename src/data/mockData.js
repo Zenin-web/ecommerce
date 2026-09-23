@@ -151,10 +151,5 @@ export const mockUsers = [
   { _id: "u3", name: "Bosh Admin", email: "admin@shop.uz", role: "admin", createdAt: "2026-01-01" },
 ];
 
-export const orderStatusLabels = {
-  pending: { label: "Kutilmoqda", variant: "outline" },
-  processing: { label: "Tayyorlanmoqda", variant: "secondary" },
-  shipped: { label: "Jo'natildi", variant: "default" },
-  delivered: { label: "Yetkazildi", variant: "success" },
-  cancelled: { label: "Bekor qilindi", variant: "destructive" },
-};
+// Removed orderStatusLabels to constants/orders.js
+

@@ -21,6 +21,7 @@ useDeleteProductMutation,
 import { useGetAllCategoriesQuery } from "@/store/api/categoryApi/categoryApi";
 import { getApiErrorMessage } from "@/lib/auth";
 import { formatPrice, getImageUrl } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function AdminProducts() {
 const [search, setSearch] = useState("");
@@ -37,31 +38,11 @@ const [deleteProduct, { isLoading: isDeleting }] =
 useDeleteProductMutation();
 
 const products = useMemo(() => {
-if (Array.isArray(productsResponse)) {
-return productsResponse;
-}
-
-return (
-  productsResponse?.data?.products ||
-  productsResponse?.data ||
-  productsResponse?.products ||
-  []
-);
-
+return productsResponse?.data?.products || productsResponse?.data || productsResponse || [];
 }, [productsResponse]);
 
 const categories = useMemo(() => {
-if (Array.isArray(categoriesResponse)) {
-return categoriesResponse;
-}
-
-return (
-  categoriesResponse?.data?.categories ||
-  categoriesResponse?.data ||
-  categoriesResponse?.categories ||
-  []
-);
-
+return categoriesResponse?.data?.categories || categoriesResponse?.data || categoriesResponse || [];
 }, [categoriesResponse]);
 
 const filteredProducts = useMemo(() => {
@@ -93,7 +74,7 @@ return category?.name || "-";
 };
 
 const handleDelete = async (id, title) => {
-const confirmed = window.confirm( 
+const confirmed = window.confirm(
 `${title} mahsulotini o'chirishni xohlaysizmi?`
 );
 
@@ -101,10 +82,11 @@ if (!confirmed) return;
 
 try {
 await deleteProduct(id).unwrap();
+toast.success("Mahsulot muvaffaqiyatli o'chirildi");
 } catch (error) {
 console.error("Mahsulotni o'chirishda xato:", error);
 
-alert(getApiErrorMessage(error, "Mahsulotni o'chirishda xatolik yuz berdi."));
+toast.error(getApiErrorMessage(error, "Mahsulotni o'chirishda xatolik yuz berdi."));
 
 }
 };
@@ -278,6 +260,5 @@ return (
     </table>
   </Card>
 </div>
-
 );
 }

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +14,11 @@ SelectItem,
 import {
 useGetAllOrdersAdminQuery,
 useUpdateOrderStatusMutation,
-} from "@/store/api/orderApi";
+} from "@/store/api/orderApi/orderApi";
 
-import { orderStatusLabels } from "@/data/mockData";
+import { orderStatusLabels } from "@/constants/orders";
 import { formatPrice } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/auth";
 
 export default function AdminOrders() {
 const {
@@ -38,32 +40,39 @@ body: {
 status,
 },
 }).unwrap();
+toast.success("Buyurtma holati yangilandi");
 } catch (error) {
 console.error("ORDER STATUS ERROR:", error);
+toast.error(getApiErrorMessage(error, "Buyurtma holatini yangilashda xatolik yuz berdi"));
 }
 };
 
 if (isLoading) {
 return (
-<Card className="p-6">
+<div className="flex items-center justify-center py-20 text-muted-foreground">
 Buyurtmalar yuklanmoqda...
-</Card>
+</div>
 );
 }
 
 if (isError) {
 return (
-<Card className="p-6 text-destructive">
+<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
+<p className="font-medium text-destructive">
 Buyurtmalarni yuklashda xatolik yuz berdi.
-</Card>
+</p>
+    <p className="mt-1 text-sm text-muted-foreground">
+      Backend ishlayotganini tekshirib ko'ring.
+    </p>
+  </div>
 );
 }
 
 if (orders.length === 0) {
 return (
-<Card className="p-6">
+<div className="flex items-center justify-center py-20 text-muted-foreground">
 Hozircha buyurtmalar mavjud emas.
-</Card>
+</div>
 );
 }
 
@@ -153,6 +162,5 @@ return (
     </tbody>
   </table>
 </Card>
-
 );
 }

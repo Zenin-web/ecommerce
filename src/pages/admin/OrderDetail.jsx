@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 
 import { useGetSingleOrderQuery, useUpdateOrderStatusMutation } from "@/store/api/orderApi";
-import { orderStatusLabels } from "@/data/mockData";
+import { orderStatusLabels } from "@/constants/orders";
 import { formatPrice } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/auth";
 
