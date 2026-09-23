@@ -17,23 +17,12 @@ import {
   useUpdateMeProfileImgMutation,
 } from "@/store/api/authApi";
 import { useUploadFileMutation } from "@/store/api/uploadApi";
-import { getApiErrorMessage } from "@/lib/auth";
+import { extractProfileImage, extractUploadPath, extractUser, getApiErrorMessage } from "@/lib/auth";
 import { getImageUrl } from "@/lib/utils";
-
-function extractUploadPath(response) {
-  return (
-    response?.path ||
-    response?.filePath ||
-    response?.url ||
-    response?.data?.path ||
-    response?.data?.filePath ||
-    response?.data?.url
-  );
-}
 
 export default function Profile() {
   const { data: meResponse, isLoading } = useMeQuery();
-  const user = meResponse?.user || meResponse?.data || meResponse;
+  const user = extractUser(meResponse);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -161,7 +150,7 @@ export default function Profile() {
     );
   }
 
-  const profileImg = user?.profileImg || user?.profileImage || user?.avatar;
+  const profileImg = extractProfileImage(user);
   const avatarSrc = getImageUrl(profileImg);
   const fallback = user?.name?.charAt(0)?.toUpperCase() || "A";
 

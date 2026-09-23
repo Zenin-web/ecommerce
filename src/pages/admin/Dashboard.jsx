@@ -1,21 +1,64 @@
-import { DollarSign, ShoppingCart, Package, Users, TrendingUp, ArrowUpRight } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { DollarSign, ShoppingCart, Package, Users } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { mockOrders, orderStatusLabels } from "@/data/mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetAdminStatsQuery } from "@/store/api/orderApi";
+import { orderStatusLabels } from "@/data/mockData";
 import { formatPrice } from "@/lib/utils";
 
-const stats = [
-  { label: "Umumiy savdo", value: "48 250 000 so'm", icon: DollarSign, change: "+12.4%" },
-  { label: "Buyurtmalar", value: "128", icon: ShoppingCart, change: "+8.1%" },
-  { label: "Mahsulotlar", value: "342", icon: Package, change: "+3" },
-  { label: "Foydalanuvchilar", value: "1 204", icon: Users, change: "+24" },
-];
-
 export default function Dashboard() {
+  const { data, isLoading, isError } = useGetAdminStatsQuery();
+  const stats = data?.data;
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError || !stats) {
+    return (
+      <Card className="p-6 text-destructive">
+        Statistikani yuklashda xatolik yuz berdi. Backend ishlayotganini tekshiring.
+      </Card>
+    );
+  }
+
+  const cards = [
+    {
+      label: "Umumiy savdo",
+      value: formatPrice(stats.totalRevenue),
+      icon: DollarSign,
+    },
+    {
+      label: "Buyurtmalar",
+      value: stats.totalOrders,
+      icon: ShoppingCart,
+    },
+    {
+      label: "Mahsulotlar",
+      value: stats.totalProducts,
+      icon: Package,
+    },
+    {
+      label: "Foydalanuvchilar",
+      value: stats.totalUsers,
+      icon: Users,
+    },
+  ];
+
+  // Oxirgi 14 kunlik savdo grafigi uchun eng katta qiymatga nisbatan foiz
+  const salesDays = stats.salesLast14Days || [];
+  const maxSale = Math.max(1, ...salesDays.map((d) => d.total));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map(({ label, value, icon: Icon, change }) => (
+        {cards.map(({ label, value, icon: Icon }) => (
           <Card key={label} className="p-5">
             <div className="flex items-start justify-between">
               <div>
@@ -26,10 +69,6 @@ export default function Dashboard() {
                 <Icon className="size-5" />
               </div>
             </div>
-            <p className="mt-3 flex items-center gap-1 text-xs font-medium text-success">
-              <TrendingUp className="size-3.5" />
-              {change} shu oyda
-            </p>
           </Card>
         ))}
       </div>
@@ -38,31 +77,46 @@ export default function Dashboard() {
         <Card className="p-5 xl:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold">Savdo dinamikasi</h3>
-            <Badge variant="secondary">Oxirgi 30 kun</Badge>
+            <Badge variant="secondary">Oxirgi 14 kun</Badge>
           </div>
-          <div className="flex h-56 items-end justify-between gap-2">
-            {[40, 65, 50, 80, 55, 90, 70, 95, 60, 85, 75, 100].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t-md bg-primary/70 transition-all hover:bg-primary"
-                style={{ height: `${h}%` }}
-              />
-            ))}
-          </div>
+
+          {salesDays.length === 0 ? (
+            <p className="flex h-56 items-center justify-center text-sm text-muted-foreground">
+              Bu davrda savdo mavjud emas.
+            </p>
+          ) : (
+            <div className="flex h-56 items-end justify-between gap-2">
+              {salesDays.map((day) => (
+                <div
+                  key={day._id}
+                  className="group relative flex-1 rounded-t-md bg-primary/70 transition-all hover:bg-primary"
+                  style={{ height: `${Math.max(4, (day.total / maxSale) * 100)}%` }}
+                  title={`${day._id}: ${formatPrice(day.total)}`}
+                />
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card className="p-5">
           <h3 className="mb-4 font-semibold">So'nggi buyurtmalar</h3>
           <div className="flex flex-col gap-3">
-            {mockOrders.map((order) => {
+            {(stats.recentOrders || []).length === 0 && (
+              <p className="text-sm text-muted-foreground">Hozircha buyurtmalar mavjud emas.</p>
+            )}
+            {(stats.recentOrders || []).map((order) => {
               const status = orderStatusLabels[order.status];
               return (
                 <div key={order._id} className="flex items-center justify-between text-sm">
                   <div>
-                    <p className="font-medium">#{order._id.toUpperCase()}</p>
+                    <p className="font-medium">{order.user?.name || "Noma'lum"}</p>
                     <p className="text-xs text-muted-foreground">{formatPrice(order.totalPrice)}</p>
                   </div>
-                  <Badge variant={status.variant}>{status.label}</Badge>
+                  {status ? (
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{order.status}</span>
+                  )}
                 </div>
               );
             })}

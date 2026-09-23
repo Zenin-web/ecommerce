@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMeQuery } from "@/store/api/authApi";
 import { baseApi } from "@/store/api/baseApi/baseApi";
-import { clearToken } from "@/lib/auth";
+import { clearToken, extractProfileImage, extractUser } from "@/lib/auth";
 import { getImageUrl } from "@/lib/utils";
 import { useDispatch } from "react-redux";
 
@@ -19,9 +19,9 @@ export function AdminTopbar({ title }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { data: meResponse } = useMeQuery();
-  const user = meResponse?.user || meResponse?.data || meResponse;
+  const user = extractUser(meResponse);
 
-  const profileImg = user?.profileImg || user?.profileImage || user?.avatar;
+  const profileImg = extractProfileImage(user);
   const avatarSrc = getImageUrl(profileImg);
   const fallback = user?.name?.charAt(0)?.toUpperCase() || "A";
 

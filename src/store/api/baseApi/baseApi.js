@@ -3,9 +3,8 @@ import { API_TAGS } from "@/constants/apiTags";
 
 // Dev: Vite proxy orqali backendga (CORS muammosiz)
 // Prod: to'g'ridan-to'g'ri backend URL
-const baseUrl = import.meta.env.DEV
-  ? ""
-  : import.meta.env.VITE_API_BASE_URL || "http://localhost:5757";
+const baseUrl = 
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8989";
 
 /**
  * Asosiy (root) API. Har bir modul (auth, product, category...)
