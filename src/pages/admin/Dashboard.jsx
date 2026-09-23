@@ -3,8 +3,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetAdminStatsQuery } from "@/store/api/orderApi";
-import { orderStatusLabels } from "@/data/mockData";
 import { formatPrice } from "@/lib/utils";
+
+const orderStatusLabels = {
+  pending: { label: "Kutilmoqda", variant: "outline" },
+  processing: { label: "Tayyorlanmoqda", variant: "secondary" },
+  shipped: { label: "Jo'natildi", variant: "default" },
+  delivered: { label: "Yetkazildi", variant: "success" },
+  cancelled: { label: "Bekor qilindi", variant: "destructive" },
+};
 
 export default function Dashboard() {
   const { data, isLoading, isError } = useGetAdminStatsQuery();
