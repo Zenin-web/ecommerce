@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, UploadCloud, X } from "lucide-react";
 
@@ -80,6 +80,14 @@ export default function ProductForm() {
     getInitialFormData(product)
   );
 
+  // Backenddan mahsulot kelganda formani eski ma'lumotlar bilan to'ldiradi
+  useEffect(() => {
+    if (isEdit && product) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormData(getInitialFormData(product));
+    }
+  }, [isEdit, product]);
+
   const {
     data: categoryData,
     isLoading: isCategoriesLoading,
@@ -101,17 +109,17 @@ export default function ProductForm() {
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
   const handleCategoryChange = (value) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       category: value,
-    });
+    }));
   };
 
   const handleImageUpload = async (event) => {
@@ -134,28 +142,36 @@ export default function ProductForm() {
       }
 
       if (uploadedImages.length > 0) {
-        setFormData({
-          ...formData,
-          images: formData.images.concat(uploadedImages),
-        });
+        setFormData((prev) => ({
+          ...prev,
+          images: prev.images.concat(uploadedImages),
+        }));
       } else {
-        alert("Rasm yuklandi, lekin yo'li olinmadi. Qaytadan urinib ko'ring.");
+        alert(
+          "Rasm yuklandi, lekin yo'li olinmadi. Qaytadan urinib ko'ring."
+        );
       }
     } catch (error) {
       console.error("UPLOAD ERROR:", error);
-      alert(getApiErrorMessage(error, "Rasm yuklashda xatolik yuz berdi"));
+
+      alert(
+        getApiErrorMessage(
+          error,
+          "Rasm yuklashda xatolik yuz berdi"
+        )
+      );
     }
 
     event.target.value = "";
   };
 
   const removeImage = (index) => {
-    setFormData({
-      ...formData,
-      images: formData.images.filter(
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter(
         (_, imageIndex) => imageIndex !== index
       ),
-    });
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -212,7 +228,12 @@ export default function ProductForm() {
       console.error("STATUS:", error?.status);
       console.error("ERROR DATA:", error?.data);
 
-      alert(getApiErrorMessage(error, "Mahsulotni saqlashda xatolik yuz berdi"));
+      alert(
+        getApiErrorMessage(
+          error,
+          "Mahsulotni saqlashda xatolik yuz berdi"
+        )
+      );
     }
   };
 
@@ -244,7 +265,7 @@ export default function ProductForm() {
     <div className="mx-auto max-w-3xl pb-10">
       <div className="mb-6 flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link to="/admin/products">
+          <Link to="/products">
             <ArrowLeft className="size-4" />
           </Link>
         </Button>
@@ -443,9 +464,7 @@ export default function ProductForm() {
 
                       <button
                         type="button"
-                        onClick={() =>
-                          removeImage(index)
-                        }
+                        onClick={() => removeImage(index)}
                         className="absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black"
                       >
                         <X className="size-4" />
@@ -463,7 +482,7 @@ export default function ProductForm() {
               variant="outline"
               asChild
             >
-              <Link to="/admin/products">
+              <Link to="/products">
                 Bekor qilish
               </Link>
             </Button>
