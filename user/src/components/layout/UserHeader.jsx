@@ -10,7 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { mockCategories } from "@/data/mockData";
+import { useGetAllCategoriesQuery } from "@/store/api/categoryApi/categoryApi";
+import { useGetMyCartQuery } from "@/store/api/cartApi/cartApi";
+import { useMeQuery } from "@/store/api/authApi/authApi";
 
 const navLinkClass = ({ isActive }) =>
   `text-sm font-medium transition-colors hover:text-primary whitespace-nowrap ${
@@ -18,6 +20,25 @@ const navLinkClass = ({ isActive }) =>
   }`;
 
 export function UserHeader() {
+  const {
+    data: categoriesResponse,
+    isLoading: loadingCategories
+  } = useGetAllCategoriesQuery();
+
+  const {
+    data: cartResponse
+  } = useGetMyCartQuery();
+
+  const {
+    data: userResponse
+  } = useMeQuery();
+
+  const categories = categoriesResponse?.data || [];
+  const cartItems = cartResponse?.data || [];
+  const user = userResponse?.data;
+
+  const cartCount = cartItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6">
@@ -41,34 +62,49 @@ export function UserHeader() {
           <Button variant="ghost" size="icon" asChild className="relative">
             <Link to="/cart">
               <ShoppingCart className="size-5" />
-              <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-accent-foreground">
-                3
-              </span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-accent-foreground">
+                  {cartCount}
+                </span>
+              )}
             </Link>
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <User className="size-5" />
+              <Button variant="ghost" size="icon" className="flex items-center gap-2 px-2">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="profile" className="size-5 rounded-full object-cover" />
+                ) : (
+                  <User className="size-5" />
+                )}
+                {user && <span className="text-xs font-medium hidden sm:inline">{user.name}</span>}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Mening hisobim</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/profile">Profil</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/orders">Buyurtmalarim</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/favorites">Sevimlilar</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/login">Kirish / Ro'yxatdan o'tish</Link>
-              </DropdownMenuItem>
+              {user ? (
+                <>
+                  <DropdownMenuLabel>Mening hisobim</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/account">Profil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/orders">Buyurtmalarim</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/favorites">Sevimlilar</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive">
+                    Chiqish
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem asChild>
+                  <Link to="/login">Kirish / Ro'yxatdan o'tish</Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -87,8 +123,8 @@ export function UserHeader() {
         <NavLink to="/catalog" className={navLinkClass} end>
           Barcha kategoriyalar
         </NavLink>
-        {mockCategories.map((cat) => (
-          <NavLink key={cat._id} to={`/catalog?category=${cat.slug}`} className={navLinkClass}>
+        {categories.map((cat) => (
+          <NavLink key={cat._id} to={`/catalog/${cat.slug || cat._id}`} className={navLinkClass}>
             {cat.name}
           </NavLink>
         ))}

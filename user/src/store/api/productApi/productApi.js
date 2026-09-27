@@ -5,7 +5,10 @@ import { PRODUCT_PATH } from "./path";
 export const productApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAllProducts: builder.query({
-      query: () => PRODUCT_PATH.GET_ALL,
+      query: (categoryId) => ({
+        url: PRODUCT_PATH.GET_ALL,
+        params: categoryId ? { category: categoryId } : {},
+      }),
       providesTags: [API_TAGS.PRODUCT],
     }),
   }),

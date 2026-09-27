@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { SlidersHorizontal, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -13,15 +13,16 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { ProductCard } from "@/components/shared/ProductCard";
-import { mockCategories, mockProducts } from "@/data/mockData";
+import { useGetAllCategoriesQuery } from "@/store/api/categoryApi/categoryApi";
+import { useGetAllProductsQuery } from "@/store/api/productApi/productApi";
 
-function FiltersPanel() {
+function FiltersPanel({ categories }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h3 className="mb-3 text-sm font-semibold">Kategoriya</h3>
         <div className="flex flex-col gap-2">
-          {mockCategories.map((cat) => (
+          {categories?.map((cat) => (
             <label key={cat._id} className="flex items-center gap-2 text-sm text-muted-foreground">
               <input type="checkbox" className="size-3.5 accent-primary" />
               {cat.name}
@@ -61,14 +62,65 @@ function FiltersPanel() {
 }
 
 export default function Catalog() {
+  const { categorySlug } = useParams();
   const [showFilters, setShowFilters] = useState(false);
+
+  // 1. Fetch categories to resolve slug/id to category object
+  const {
+    data: categoriesData,
+    isLoading: loadingCats
+  } = useGetAllCategoriesQuery();
+
+  const categories = categoriesData?.data || [];
+
+  // Resolve category: look for slug match, then ID match
+  const currentCategory = useMemo(() => {
+    if (!categorySlug) return null;
+    return categories.find(cat => cat.slug === categorySlug || cat._id === categorySlug);
+  }, [categories, categorySlug]);
+
+  // 2. Fetch products ONLY after category is resolved (if categorySlug is present)
+  // If categorySlug is missing, we fetch all products.
+  const {
+    data: productsData,
+    isLoading: loadingProducts,
+    isError
+  } = useGetAllProductsQuery(
+    currentCategory ? currentCategory._id : (categorySlug ? null : undefined),
+    { skip: categorySlug && !currentCategory }
+  );
+
+  const products = productsData?.data || [];
+
+  // 3. Backend Validation Layer:
+  // Check if the backend actually filtered the results.
+  // If we requested a specific category, but returned products have different category IDs,
+  // the backend is ignoring the filter.
+  const isFilteringBroken = useMemo(() => {
+    if (!categorySlug || !currentCategory || products.length === 0) return false;
+    // Check if any product belongs to a DIFFERENT category
+    return products.some(p => p.category !== currentCategory._id);
+  }, [products, currentCategory, categorySlug]);
+
+  if (isError) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center">
+        <p className="text-lg font-medium text-destructive">Ma'lumotlarni yuklashda xatolik yuz berdi</p>
+        <Button onClick={() => window.location.reload()}>Qayta urinib ko'rish</Button>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Katalog</h1>
-          <p className="text-sm text-muted-foreground">{mockProducts.length} ta mahsulot topildi</p>
+          <h1 className="text-xl font-semibold">
+            {currentCategory ? currentCategory.name : "Barcha mahsulotlar"}
+          </h1>
+          {!loadingProducts && (
+            <p className="text-sm text-muted-foreground">{products.length} ta mahsulot topildi</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -98,7 +150,7 @@ export default function Catalog() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         <Card className="hidden h-fit p-4 lg:block">
-          <FiltersPanel />
+          <FiltersPanel categories={categories} />
         </Card>
 
         {showFilters && (
@@ -111,16 +163,45 @@ export default function Catalog() {
                   <X className="size-5" />
                 </button>
               </div>
-              <FiltersPanel />
+              <FiltersPanel categories={categories} />
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {mockProducts.map((product) => (
-            <ProductCard key={product._id} product={product} />
-          ))}
-        </div>
+        {loadingProducts || loadingCats ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="aspect-[3/4] animate-pulse rounded-xl bg-secondary" />
+            ))}
+          </div>
+        ) : categorySlug && !currentCategory ? (
+          <div className="flex h-[40vh] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-lg font-medium text-muted-foreground">
+              Kategoriya topilmadi
+            </p>
+          </div>
+        ) : isFilteringBroken ? (
+          <div className="flex h-[40vh] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-lg font-medium text-destructive">
+              Kategoriya filtrlash tizimi backendda faol emas
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Iltimos, qidiruv panelidan foydalaning.
+            </p>
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {products.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex h-[40vh] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-lg font-medium text-muted-foreground">
+              Bu kategoriyada mahsulotlar yo‘q
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

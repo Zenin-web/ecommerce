@@ -165,7 +165,7 @@ export default function Home() {
             {categories.map((cat) => (
               <Link
                 key={cat._id}
-                to={`/catalog?category=${cat.slug}`}
+                to={`/catalog/${cat.slug}`}
               >
                 <Card className="flex aspect-square flex-col items-center justify-center gap-2 p-3 text-center transition-colors hover:border-primary">
                   <div className="flex size-10 items-center justify-center rounded-full bg-secondary">
