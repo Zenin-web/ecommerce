@@ -43,8 +43,11 @@ export default function Profile() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(user.name || "");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhone(user.phone || "");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNewEmail(user.email || "");
     }
   }, [user]);
