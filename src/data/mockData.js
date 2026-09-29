@@ -5,12 +5,12 @@
  */
 
 export const mockCategories = [
-  { _id: "c1", name: "Elektronika", slug: "elektronika", image: "" },
-  { _id: "c2", name: "Kiyim-kechak", slug: "kiyim-kechak", image: "" },
-  { _id: "c3", name: "Uy jihozlari", slug: "uy-jihozlari", image: "" },
-  { _id: "c4", name: "Sport", slug: "sport", image: "" },
-  { _id: "c5", name: "Go'zallik", slug: "gozallik", image: "" },
-  { _id: "c6", name: "Bolalar dunyosi", slug: "bolalar", image: "" },
+  { _id: "c1", name: "Elektronika", slug: "elektronika", image: "https://placehold.co/400x400?text=Elektronika" },
+  { _id: "c2", name: "Kiyim-kechak", slug: "kiyim-kechak", image: "https://placehold.co/400x400?text=Kiyim" },
+  { _id: "c3", name: "Uy jihozlari", slug: "uy-jihozlari", image: "https://placehold.co/400x400?text=Uy+Jihozlari" },
+  { _id: "c4", name: "Sport", slug: "sport", image: "https://placehold.co/400x400?text=Sport" },
+  { _id: "c5", name: "Go'zallik", slug: "gozallik", image: "https://placehold.co/400x400?text=Gozallik" },
+  { _id: "c6", name: "Bolalar dunyosi", slug: "bolalar", image: "https://placehold.co/400x400?text=Bolalar" },
 ];
 
 export const mockProducts = [
@@ -23,7 +23,7 @@ export const mockProducts = [
     rating: 4.8,
     numReviews: 124,
     stock: 15,
-    images: [],
+    images: ["https://placehold.co/600x600?text=iPhone+15+Pro"],
     category: "c1",
   },
   {
@@ -35,7 +35,7 @@ export const mockProducts = [
     rating: 4.6,
     numReviews: 89,
     stock: 20,
-    images: [],
+    images: ["https://placehold.co/600x600?text=S24+Ultra"],
     category: "c1",
   },
   {
@@ -47,7 +47,7 @@ export const mockProducts = [
     rating: 4.4,
     numReviews: 56,
     stock: 50,
-    images: [],
+    images: ["https://placehold.co/600x600?text=Nike+Air+Max"],
     category: "c2",
   },
   {
@@ -59,7 +59,7 @@ export const mockProducts = [
     rating: 4.5,
     numReviews: 34,
     stock: 12,
-    images: [],
+    images: ["https://placehold.co/600x600?text=Xiaomi+Robot"],
     category: "c3",
   },
   {
@@ -71,7 +71,7 @@ export const mockProducts = [
     rating: 4.2,
     numReviews: 21,
     stock: 40,
-    images: [],
+    images: ["https://placehold.co/600x600?text=Yoga+Mat"],
     category: "c4",
   },
   {
@@ -83,7 +83,7 @@ export const mockProducts = [
     rating: 4.7,
     numReviews: 210,
     stock: 60,
-    images: [],
+    images: ["https://placehold.co/600x600?text=JBL+Headphones"],
     category: "c1",
   },
   {
@@ -95,7 +95,7 @@ export const mockProducts = [
     rating: 4.1,
     numReviews: 18,
     stock: 30,
-    images: [],
+    images: ["https://placehold.co/600x600?text=Zara+Dress"],
     category: "c2",
   },
   {
@@ -107,7 +107,7 @@ export const mockProducts = [
     rating: 4.3,
     numReviews: 77,
     stock: 25,
-    images: [],
+    images: ["https://placehold.co/600x600?text=Amazfit+Watch"],
     category: "c1",
   },
 ];
