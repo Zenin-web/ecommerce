@@ -121,7 +121,7 @@ export default function AdminCategories() {
       }).unwrap();
 
       toast.success("Kategoriya yangilandi");
-      closeDialog();
+      // Keep the edit dialog open after saving.
     } catch (error) {
       console.error("Kategoriya yangilashda xato:", error);
       toast.error(getApiErrorMessage(error, "Kategoriya yangilashda xatolik yuz berdi"));
