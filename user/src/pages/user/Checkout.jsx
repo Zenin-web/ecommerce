@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, Package, MapPin, CreditCard, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ export default function Checkout() {
   const { data: cartResponse } = useGetMyCartQuery();
   const { data: addressResponse } = useGetMyAddressesQuery();
   const [createOrder, { isLoading: isCreating }] = useCreateOrderMutation();
+  const navigate = useNavigate();
 
   const cart = cartResponse?.data || [];
   const addresses = addressResponse?.data || [];
@@ -41,7 +42,7 @@ export default function Checkout() {
       const response = await createOrder(orderData).unwrap();
       toast.success("Buyurtma muvaffaqiyatli yaratildi!");
       // Redirect to success page or order details
-      window.location.href = `/account/orders/${response._id}`;
+      navigate(`/account/orders/${response._id}`);
     } catch (error) {
       toast.error("Buyurtmani rasmiylashtirishda xatolik yuz berdi");
     }
