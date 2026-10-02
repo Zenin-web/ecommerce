@@ -1,227 +1,132 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { User } from "lucide-react";
+import { useAuth, clearToken } from "@/hooks/useAuth";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { useRef, useState } from "react";
+import { Camera, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { User, Lock, LogOut } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { EmptyState } from "@/components/shared/EmptyState";
-import {
-  useMeQuery,
-  useUpdateMeInfoMutation,
-  useUpdateMePasswordMutation,
-} from "@/store/api/authApi/authApi";
-import { useAuth, clearToken } from "@/hooks/useAuth";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMeQuery, useUpdateMeInfoMutation, useUpdateMeEmailMutation,
+  useUpdateMePasswordMutation, useUpdateMeProfileImgMutation } from "@/store/api/authApi";
+import { useUploadFileMutation } from "@/store/api/uploadApi";
+import { extractUploadPath, getApiErrorMessage } from "@/lib/auth";
+import { getImageUrl } from "@/lib/utils";
+import { isStrongPassword, PASSWORD_HINT, validateImage } from "@/lib/validation";
 
-export default function Profile() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
-  const { data: meResponse, isLoading, isError } = useMeQuery(undefined, {
-    skip: !isAuthenticated,
-  });
-  const [updateMeInfo] = useUpdateMeInfoMutation();
-  const [updateMePassword, { isLoading: isSavingPassword }] = useUpdateMePasswordMutation();
-
-  const user = meResponse?.data || meResponse;
-
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  const handleLogout = () => {
-    clearToken();
-    navigate("/");
-  };
-
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("Yangi parollar mos kelmadi");
-      return;
-    }
-
-    try {
-      await updateMePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      }).unwrap();
-      toast.success("Parol yangilandi");
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (error) {
-      toast.error(error?.data?.message || "Parolni yangilab bo'lmadi");
-    }
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <EmptyState
-        icon={User}
-        title="Profilni ko'rish uchun tizimga kiring"
-        description="Shaxsiy ma'lumotlaringizni ko'rish uchun avval tizimga kiring"
-        actionLabel="Kirish"
-        actionLink="/login"
-      />
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <p className="py-16 text-center text-sm text-muted-foreground">Profil yuklanmoqda...</p>
-    );
-  }
-
-  if (isError || !user) {
-    return (
-      <p className="py-16 text-center text-sm text-muted-foreground">
-        Ma'lumotlarni yuklashda xatolik yuz berdi
-      </p>
-    );
-  }
-
-  const initials = (user.name || user.email || "U").slice(0, 2).toUpperCase();
-
-  return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center gap-4">
-        <Avatar src={user.profileImg} fallback={initials} className="size-16 text-lg" />
-        <div>
-          <h1 className="text-xl font-semibold">{user.name || "Foydalanuvchi"}</h1>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
-        </div>
-      </div>
-
-      <Tabs defaultValue="info">
-        <TabsList className="w-full">
-          <TabsTrigger value="info">
-            <User className="size-4" />
-            Ma'lumotlar
-          </TabsTrigger>
-          <TabsTrigger value="password">
-            <Lock className="size-4" />
-            Parol
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="info" className="pt-4">
-          <ProfileInfoForm key={user._id || user.email} user={user} updateMeInfo={updateMeInfo} />
-        </TabsContent>
-
-        <TabsContent value="password" className="pt-4">
-          <Card className="p-5">
-            <form onSubmit={handlePasswordSubmit}>
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label>Joriy parol</Label>
-                  <Input
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) =>
-                      setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Yangi parol</Label>
-                  <Input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) =>
-                      setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Yangi parolni tasdiqlang</Label>
-                  <Input
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-              <Button type="submit" className="mt-4" disabled={isSavingPassword}>
-                {isSavingPassword ? "Yangilanmoqda..." : "Parolni yangilash"}
-              </Button>
-            </form>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Separator className="my-6" />
-
-      <Button
-        variant="outline"
-        className="w-full text-destructive hover:text-destructive"
-        onClick={handleLogout}
-      >
-        <LogOut className="size-4" />
-        Chiqish
-      </Button>
-    </div>
-  );
+function ProfileContent() {
+  const { data, isLoading, isError, refetch } = useMeQuery();
+  if (isLoading) return <p className="py-16 text-center">Profil yuklanmoqda...</p>;
+  if (isError || !data?.data) return <div role="alert" className="py-16 text-center"><p>Profilni yuklab bo‘lmadi</p><Button onClick={refetch}>Qayta urinish</Button></div>;
+  return <ProfileForm key={data.data._id} user={data.data} />;
 }
 
-// Alohida komponent: `user` prop orqali boshlang'ich qiymatlarni oladi,
-// shuning uchun useEffect + setState kerak emas (Profile komponenti uni
-// `key={user._id}` bilan render qiladi, user o'zgarsa qayta yaratiladi).
-function ProfileInfoForm({ user, updateMeInfo }) {
-  const [form, setForm] = useState({
-    name: user.name || "",
-    phone: user.phone || "",
-    email: user.email || "",
-  });
-  const [isSaving, setIsSaving] = useState(false);
+function ProfileForm({ user }) {
+  const [name, setName] = useState(user.name || "");
+  const [phone, setPhone] = useState(user.phone || "");
+  const [email, setEmail] = useState(user.email || "");
+  const [passwords, setPasswords] = useState({ old_password: "", new_password: "", confirm_password: "" });
+  const fileRef = useRef(null);
+  const [updateInfo, infoState] = useUpdateMeInfoMutation();
+  const [updateEmail, emailState] = useUpdateMeEmailMutation();
+  const [updatePassword, passwordState] = useUpdateMePasswordMutation();
+  const [updateImage, imageState] = useUpdateMeProfileImgMutation();
+  const [uploadFile, uploadState] = useUploadFileMutation();
+  const savingImage = imageState.isLoading || uploadState.isLoading;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
+  async function handleAvatar(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file || savingImage) return;
     try {
-      await updateMeInfo({ name: form.name, phone: form.phone }).unwrap();
-      toast.success("Ma'lumotlar yangilandi");
+      const error = validateImage(file);
+      if (error) { toast.error(error); return; }
+      const result = await uploadFile(file).unwrap();
+      const newProfileImg = extractUploadPath(result);
+      if (!newProfileImg) throw new Error("Rasm yo‘li olinmadi");
+      await updateImage({ newProfileImg }).unwrap();
+      toast.success("Profil rasmi yangilandi");
     } catch (error) {
-      toast.error(error?.data?.message || "Ma'lumotlarni saqlab bo'lmadi");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+      toast.error(getApiErrorMessage(error, error.message || "Profil rasmini yangilab bo‘lmadi"));
+    } finally { input.value = ""; }
+  }
 
-  return (
-    <Card className="p-5">
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label>To'liq ism</Label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Telefon</Label>
-            <Input
-              value={form.phone}
-              onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label>Email</Label>
-            <Input value={form.email} type="email" disabled />
-          </div>
-        </div>
-        <Button type="submit" className="mt-4" disabled={isSaving}>
-          {isSaving ? "Saqlanmoqda..." : "Saqlash"}
+  async function handleInfo(event) {
+    event.preventDefault();
+    if (infoState.isLoading) return;
+    if (!name.trim()) { toast.error("Ismni kiriting"); return; }
+    if (user.phone && !phone.trim()) { toast.error("Telefon raqamini kiriting"); return; }
+    try {
+      await updateInfo({ name: name.trim(), phone: phone.trim() }).unwrap();
+      toast.success("Ma’lumotlar yangilandi");
+    } catch (error) { toast.error(getApiErrorMessage(error, "Ma’lumotlarni saqlab bo‘lmadi")); }
+  }
+
+  async function handleEmail(event) {
+    event.preventDefault();
+    if (emailState.isLoading) return;
+    if (email.trim() === user.email) { toast.error("Yangi emailni kiriting"); return; }
+    try {
+      await updateEmail({ newEmail: email.trim() }).unwrap();
+      toast.success("Email yangilandi");
+    } catch (error) { toast.error(getApiErrorMessage(error, "Emailni yangilab bo‘lmadi")); }
+  }
+
+  async function handlePassword(event) {
+    event.preventDefault();
+    if (passwordState.isLoading) return;
+    if (passwords.old_password.length < 8) { toast.error("Joriy parol kamida 8 belgi bo‘lishi kerak"); return; }
+    if (!isStrongPassword(passwords.new_password)) { toast.error(PASSWORD_HINT); return; }
+    if (passwords.new_password !== passwords.confirm_password) { toast.error("Yangi parollar mos kelmayapti"); return; }
+    if (passwords.new_password === passwords.old_password) { toast.error("Yangi parol joriy paroldan farq qilishi kerak"); return; }
+    try {
+      await updatePassword(passwords).unwrap();
+      setPasswords({ old_password: "", new_password: "", confirm_password: "" });
+      toast.success("Parol yangilandi");
+    } catch (error) { toast.error(getApiErrorMessage(error, "Parolni yangilab bo‘lmadi")); }
+  }
+
+  return <div className="mx-auto max-w-3xl space-y-6">
+    <h1 className="text-xl font-semibold">Profil</h1>
+    <Card className="flex-row items-center gap-4 p-5">
+      <div className="relative">
+        <Avatar src={getImageUrl(user.profile_image)} fallback={(user.name || "U")[0]} className="size-20 text-xl" />
+        <Button type="button" size="icon" variant="secondary" aria-label="Profil rasmini o‘zgartirish" className="absolute -right-1 -bottom-1 size-8 rounded-full" onClick={() => fileRef.current?.click()} disabled={savingImage}>
+          {savingImage ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
         </Button>
-      </form>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatar} disabled={savingImage} />
+      </div>
+      <div><h2 className="font-semibold">{user.name}</h2><p className="text-sm text-muted-foreground">{user.email}</p><p className="text-sm text-muted-foreground">{user.phone}</p></div>
     </Card>
-  );
+    <Tabs defaultValue="info">
+      <TabsList><TabsTrigger value="info">Ma’lumotlar</TabsTrigger><TabsTrigger value="email">Email</TabsTrigger><TabsTrigger value="password">Parol</TabsTrigger></TabsList>
+      <TabsContent value="info"><Card className="p-5"><form onSubmit={handleInfo} className="space-y-4">
+        <div><Label htmlFor="profile-name">Ism</Label><Input id="profile-name" value={name} onChange={e => setName(e.target.value)} required disabled={infoState.isLoading} /></div>
+        <div><Label htmlFor="profile-phone">Telefon</Label><Input id="profile-phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} disabled={infoState.isLoading} /></div>
+        <Button disabled={infoState.isLoading}>{infoState.isLoading ? "Saqlanmoqda..." : "Saqlash"}</Button>
+      </form></Card></TabsContent>
+      <TabsContent value="email"><Card className="p-5"><form onSubmit={handleEmail} className="space-y-4">
+        <Label htmlFor="profile-email">Yangi email</Label><Input id="profile-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={emailState.isLoading} />
+        <Button disabled={emailState.isLoading}>{emailState.isLoading ? "Saqlanmoqda..." : "Emailni yangilash"}</Button>
+      </form></Card></TabsContent>
+      <TabsContent value="password"><Card className="p-5"><form onSubmit={handlePassword} className="space-y-4">
+        {[['old_password', 'Joriy parol'], ['new_password', 'Yangi parol'], ['confirm_password', 'Yangi parolni tasdiqlang']].map(([key, label]) => <div key={key}>
+          <Label htmlFor={key}>{label}</Label><Input id={key} type="password" autoComplete={key === 'old_password' ? 'current-password' : 'new-password'} minLength={8} required value={passwords[key]} onChange={e => setPasswords(prev => ({ ...prev, [key]: e.target.value }))} disabled={passwordState.isLoading} />
+        </div>)}
+        <p className="text-xs text-muted-foreground">{PASSWORD_HINT}</p>
+        <Button disabled={passwordState.isLoading}>{passwordState.isLoading ? "Saqlanmoqda..." : "Parolni yangilash"}</Button>
+      </form></Card></TabsContent>
+    </Tabs>
+  </div>;
+}
+
+export default function Profile() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  if (!isAuthenticated) return <EmptyState icon={User} title="Profilni ko‘rish uchun tizimga kiring" actionLabel="Kirish" actionLink="/login" />;
+  return <><ProfileContent /><div className="mx-auto mt-6 flex max-w-3xl gap-3"><Button asChild variant="outline"><Link to="/addresses">Manzillarim</Link></Button><Button variant="outline" onClick={() => { clearToken(); navigate("/"); }}>Chiqish</Button></div></>;
 }

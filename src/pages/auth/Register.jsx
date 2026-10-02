@@ -1,3 +1,5 @@
+import { isStrongPassword, PASSWORD_HINT } from "@/lib/validation";
+import { getApiErrorMessage } from "@/lib/auth";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -21,6 +23,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isStrongPassword(form.password)) { toast.error(PASSWORD_HINT); return; }
     try {
       const response = await signup(form).unwrap();
       const token = response?.token || response?.data?.token || response?.accessToken;
@@ -34,7 +37,7 @@ export default function Register() {
         navigate("/login");
       }
     } catch (error) {
-      toast.error(error?.data?.message || "Ro'yxatdan o'tishda xatolik yuz berdi");
+      toast.error(getApiErrorMessage(error, "Ro'yxatdan o'tishda xatolik yuz berdi"));
     }
   };
 
@@ -88,6 +91,7 @@ export default function Register() {
               <Label htmlFor="password">Parol</Label>
               <Input
                 id="password"
+                minLength={8}
                 name="password"
                 type="password"
                 placeholder="••••••••"

@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { API_TAGS } from "@/constants/apiTags";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8989";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 /**
  * Asosiy (root) API. Har bir modul (auth, product, category...)
@@ -14,7 +14,7 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8989";
 export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: API_BASE_URL,
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
 

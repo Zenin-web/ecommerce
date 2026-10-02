@@ -5,8 +5,16 @@ import { REVIEW_PATH } from "./path";
 export const reviewApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAllReviewsByProduct: builder.query({
-      query: (productId) => REVIEW_PATH.GET_ALL_BY_PRODUCT(productId),
-      providesTags: (result, error, productId) => [{ type: API_TAGS.REVIEW, id: productId }],
+      query: ({ productId, ...params }) => ({ url: REVIEW_PATH.GET_ALL_BY_PRODUCT(productId), params }),
+      providesTags: [API_TAGS.REVIEW],
+    }),
+    updateReview: builder.mutation({
+      query: ({ id, ...body }) => ({ url: REVIEW_PATH.UPDATE(id), method: "PATCH", body }),
+      invalidatesTags: [API_TAGS.REVIEW, API_TAGS.PRODUCT],
+    }),
+    deleteReview: builder.mutation({
+      query: (id) => ({ url: REVIEW_PATH.DELETE(id), method: "DELETE" }),
+      invalidatesTags: [API_TAGS.REVIEW, API_TAGS.PRODUCT],
     }),
     createReview: builder.mutation({
       query: (body) => ({
@@ -14,9 +22,9 @@ export const reviewApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: (result, error, body) => [{ type: API_TAGS.REVIEW, id: body?.product }],
+      invalidatesTags: [API_TAGS.REVIEW, API_TAGS.PRODUCT],
     }),
   }),
 });
 
-export const { useGetAllReviewsByProductQuery, useCreateReviewMutation } = reviewApi;
+export const { useGetAllReviewsByProductQuery, useCreateReviewMutation, useUpdateReviewMutation, useDeleteReviewMutation } = reviewApi;

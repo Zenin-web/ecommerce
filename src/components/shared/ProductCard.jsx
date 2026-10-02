@@ -44,7 +44,7 @@ export function ProductCard({ product, className }) {
   const favorites = Array.isArray(
     favoritesResponse?.data?.products
   )
-    ? favoritesResponse.data.products
+    ? favoritesResponse.data.products.filter(Boolean)
     : [];
 
   const isFavorite = favorites.some(
@@ -82,6 +82,7 @@ export function ProductCard({ product, className }) {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!product.isActive || product.stock <= 0) { toast.error("Mahsulot hozir mavjud emas"); return; }
     requireAuth(async () => {
       try {
         await addItem({
@@ -175,7 +176,7 @@ export function ProductCard({ product, className }) {
           size="sm"
           className="mt-1 w-full"
           onClick={handleAddToCart}
-          disabled={isAddingToCart}
+          disabled={isAddingToCart || !product.isActive || product.stock <= 0}
         >
           <ShoppingCart className="size-4" />
           Savatchaga

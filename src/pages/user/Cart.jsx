@@ -12,6 +12,7 @@ import {
   useUpdateItemMutation,
   useRemoveItemMutation,
   useClearCartMutation,
+  useIsCartQuantityPending,
 } from "@/store/api/cartApi/cartApi";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -21,11 +22,13 @@ export default function Cart() {
   const {
     data: cartResponse,
     isLoading,
+    isFetching,
     isError,
   } = useGetMyCartQuery(undefined, { skip: !isAuthenticated });
 
   const [updateItem] = useUpdateItemMutation();
-  const [removeItem] = useRemoveItemMutation();
+  const isUpdating = useIsCartQuantityPending();
+  const [removeItem, { isLoading: isRemoving }] = useRemoveItemMutation();
   const [clearCart, { isLoading: isClearing }] = useClearCartMutation();
 
   if (!isAuthenticated) {
@@ -55,21 +58,19 @@ export default function Cart() {
   }
 
   const cart = cartResponse?.data;
-  // Backend cart javobida items massivi `items` yoki `products` nomida
-  // bo'lishi mumkin — ikkalasini ham qo'llab-quvvatlaymiz.
-  const items = (cart?.items || cart?.products || [])
+  const items = (cart?.items || [])
     .map((entry) => ({
-      product: entry.product || entry,
+      product: entry.product,
       quantity: entry.quantity ?? 1,
     }))
     .filter((entry) => entry.product);
 
   const updateQuantity = async (productId, quantity) => {
-    if (quantity < 1) return;
+    if (!Number.isInteger(quantity) || quantity < 1 || isRemoving || isClearing) return;
     try {
       await updateItem({ productId, quantity }).unwrap();
-    } catch {
-      toast.error("Miqdorni yangilab bo'lmadi");
+    } catch (error) {
+      toast.error(error?.data?.msg || "Miqdorni yangilab bo'lmadi", { id: "cart-quantity-error" });
     }
   };
 
@@ -91,13 +92,13 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <EmptyState
+      <div><EmptyState
         icon={ShoppingCart}
         title="Savatchangiz bo'sh"
         description="Xarid qilishni boshlash uchun katalogga o'ting"
         actionLabel="Katalogga o'tish"
         actionLink="/catalog"
-      />
+      />{cart?.items?.length > 0 && <Button onClick={handleClear} disabled={isClearing}>Mavjud bo‘lmagan mahsulotlarni tozalash</Button>}</div>
     );
   }
 
@@ -105,8 +106,7 @@ export default function Cart() {
     (sum, i) => sum + getDiscountedPrice(i.product.price, i.product.discount) * i.quantity,
     0,
   );
-  // Agar backend cart javobida tayyor jami summa bo'lsa, o'shani ustuvor qilamiz.
-  const subtotal = cart?.totalPrice ?? cart?.total ?? computedSubtotal;
+  const subtotal = computedSubtotal;
 
   return (
     <div>
@@ -117,7 +117,7 @@ export default function Cart() {
           size="sm"
           className="text-muted-foreground hover:text-destructive"
           onClick={handleClear}
-          disabled={isClearing}
+          disabled={isUpdating || isRemoving || isClearing}
         >
           <Trash2 className="size-4" />
           Savatchani tozalash
@@ -151,6 +151,8 @@ export default function Cart() {
 
               <QuantityInput
                 value={quantity}
+                max={product.stock}
+                disabled={isRemoving || isClearing}
                 onChange={(v) => updateQuantity(product._id, v)}
               />
 
@@ -158,6 +160,7 @@ export default function Cart() {
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
+                disabled={isUpdating || isRemoving || isClearing}
                 onClick={() => handleRemove(product._id)}
               >
                 <Trash2 className="size-4" />
@@ -184,9 +187,15 @@ export default function Cart() {
             <span>{formatPrice(subtotal)}</span>
           </div>
 
-          <Button asChild size="lg" className="mt-4 w-full">
-            <Link to="/checkout">Buyurtma berish</Link>
-          </Button>
+          {isUpdating || isFetching || isRemoving || isClearing ? (
+            <Button size="lg" className="mt-4 w-full" disabled>
+              Miqdor saqlanmoqda...
+            </Button>
+          ) : (
+            <Button asChild size="lg" className="mt-4 w-full">
+              <Link to="/checkout">Buyurtma berish</Link>
+            </Button>
+          )}
         </Card>
       </div>
     </div>

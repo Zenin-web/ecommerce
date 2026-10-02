@@ -46,7 +46,7 @@ export default function Favorites() {
   }
 
   const favorites = Array.isArray(favoritesResponse?.data?.products)
-    ? favoritesResponse.data.products
+    ? favoritesResponse.data.products.filter(Boolean)
     : [];
 
   if (favorites.length === 0) {

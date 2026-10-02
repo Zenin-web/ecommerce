@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/auth";
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -34,7 +35,7 @@ export default function Login() {
       toast.success("Muvaffaqiyatli kirdingiz");
       navigate(location.state?.from || "/");
     } catch (error) {
-      toast.error(error?.data?.message || "Email yoki parol noto'g'ri");
+      toast.error(getApiErrorMessage(error, "Email yoki parol noto'g'ri"));
     }
   };
 
@@ -69,6 +70,7 @@ export default function Login() {
               </div>
               <Input
                 id="password"
+                minLength={8}
                 name="password"
                 type="password"
                 placeholder="••••••••"

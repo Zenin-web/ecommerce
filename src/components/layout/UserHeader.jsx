@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -21,12 +22,25 @@ import {
 import { useGetAllCategoriesQuery } from "@/store/api/categoryApi/categoryApi";
 import { useGetMyCartQuery } from "@/store/api/cartApi/cartApi";
 import { useAuth, clearToken } from "@/hooks/useAuth";
+function SearchForm({ initialValue, className }) {
+  const [value, setValue] = useState(initialValue);
+  const navigate = useNavigate();
+  return <form role="search" className={className} onSubmit={event => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (value.trim()) params.set("search", value.trim());
+    navigate(`/catalog${params.size ? `?${params}` : ""}`);
+  }}>
+    <Input aria-label="Mahsulot qidirish" placeholder="Mahsulot qidirish..." value={value} onChange={e => setValue(e.target.value)} className="pr-12" />
+    <Button type="submit" variant="ghost" size="icon" aria-label="Qidirish" className="absolute top-0 right-0"><Search className="size-4" /></Button>
+  </form>;
+}
 export function UserHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const { data: categoriesResponse } = useGetAllCategoriesQuery();
-  const categories = categoriesResponse?.data || [];
+  const categories = (categoriesResponse?.data || []).filter(category => category.isActive !== false);
   const { data: cartResponse } = useGetMyCartQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -58,11 +72,7 @@ export function UserHeader() {
           <span className="text-lg font-bold"> Bozorcha </span>{" "}
         </Link>{" "}
         {/* SEARCH DESKTOP */}{" "}
-        <div className="relative hidden flex-1 md:block">
-          {" "}
-          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />{" "}
-          <Input placeholder="Mahsulot qidirish..." className="pl-9" />{" "}
-        </div>{" "}
+        <SearchForm key={location.search} initialValue={new URLSearchParams(location.search).get("search") || ""} className="relative hidden flex-1 md:block" />
         {/* ACTIONS */}{" "}
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {" "}
@@ -106,6 +116,7 @@ export function UserHeader() {
                     {" "}
                     Profil{" "}
                   </DropdownMenuItem>{" "}
+                  <DropdownMenuItem onClick={() => navigate("/addresses")}>Manzillarim</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/orders")}>
                     {" "}
                     Buyurtmalarim{" "}
@@ -129,7 +140,7 @@ export function UserHeader() {
             </DropdownMenuContent>{" "}
           </DropdownMenu>{" "}
           {/* MOBILE MENU */}{" "}
-          <Button variant="ghost" size="icon" className="md:hidden">
+          <Button variant="ghost" size="icon" className="md:hidden" aria-label="Katalog" onClick={() => navigate("/catalog")}>
             {" "}
             <Menu className="size-5" />{" "}
           </Button>{" "}
@@ -142,6 +153,7 @@ export function UserHeader() {
         <Input placeholder="Mahsulot qidirish..." className="pl-9" />{" "}
       </div>{" "}
       {/* CATEGORY NAV */}{" "}
+      <div className="px-4 pb-3 md:hidden"><SearchForm key={location.search} initialValue={new URLSearchParams(location.search).get("search") || ""} className="relative" /></div>
       <nav className="scrollbar-hide flex gap-5 overflow-x-auto border-t px-4 py-2.5">
         {" "}
         {/* ALL */}{" "}

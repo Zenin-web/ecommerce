@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Avatar } from "@/components/ui/avatar";
+import { ProductReviews } from "@/components/shared/ProductReviews";
 import { StarRating } from "@/components/shared/StarRating";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { QuantityInput } from "@/components/shared/QuantityInput";
 import { cn, formatPrice, getDiscountedPrice, getImageUrl } from "@/lib/utils";
 import { useGetAllProductsQuery, useGetSingleProductQuery } from "@/store/api/productApi/productApi";
-import { useGetAllReviewsByProductQuery } from "@/store/api/reviewApi/reviewApi";
 import { useGetMyFavoritesQuery, useToggleFavoriteMutation } from "@/store/api/favoriteApi/favoriteApi";
 import { useAddItemMutation } from "@/store/api/cartApi/cartApi";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,7 +30,6 @@ export default function ProductDetail() {
     isError,
   } = useGetSingleProductQuery(id, { skip: !id });
   const { data: productsResponse } = useGetAllProductsQuery();
-  const { data: reviewsResponse } = useGetAllReviewsByProductQuery(id, { skip: !id });
 
   const { data: favoritesResponse } = useGetMyFavoritesQuery(undefined, {
     skip: !isAuthenticated,
@@ -41,8 +39,7 @@ export default function ProductDetail() {
 
   const product = productResponse?.data;
   const products = productsResponse?.data || [];
-  const reviews = reviewsResponse?.data || [];
-  const favorites = favoritesResponse?.data || [];
+  const favorites = (favoritesResponse?.data?.products || []).filter(Boolean);
 
   if (isLoading) {
     return (
@@ -63,7 +60,7 @@ export default function ProductDetail() {
   const handleToggleFavorite = () => {
     requireAuth(async () => {
       try {
-        await toggleFavorite({ productId: product._id }).unwrap();
+        await toggleFavorite({ product: product._id }).unwrap();
       } catch {
         toast.error("Sevimlilarni yangilab bo'lmadi");
       }
@@ -71,9 +68,10 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = () => {
+    if (!product.isActive || quantity > product.stock) { toast.error("Mahsulotning bu miqdori mavjud emas"); return; }
     requireAuth(async () => {
       try {
-        await addItem({ productId: product._id, quantity }).unwrap();
+        await addItem({ product: product._id, quantity }).unwrap();
         toast.success("Mahsulot savatchaga qo'shildi");
       } catch {
         toast.error("Mahsulotni savatchaga qo'shib bo'lmadi");
@@ -155,12 +153,12 @@ export default function ProductDetail() {
           <Separator />
 
           <div className="flex items-center gap-3">
-            <QuantityInput value={quantity} onChange={setQuantity} />
+            <QuantityInput value={quantity} onChange={setQuantity} max={product.stock} />
             <Button
               size="lg"
               className="flex-1"
               onClick={handleAddToCart}
-              disabled={isAddingToCart || product.stock <= 0}
+              disabled={isAddingToCart || !product.isActive || product.stock <= 0}
             >
               <ShoppingCart className="size-4" />
               Savatchaga qo'shish
@@ -193,7 +191,7 @@ export default function ProductDetail() {
         <TabsList>
           <TabsTrigger value="description">Tavsif</TabsTrigger>
           <TabsTrigger value="attributes">Xususiyatlar</TabsTrigger>
-          <TabsTrigger value="reviews">Sharhlar ({product.numReviews || reviews.length || 0})</TabsTrigger>
+          <TabsTrigger value="reviews">Sharhlar ({product.numReviews || 0})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="description" className="pt-4 text-sm leading-relaxed text-muted-foreground">
@@ -218,20 +216,7 @@ export default function ProductDetail() {
         </TabsContent>
 
         <TabsContent value="reviews" className="flex flex-col gap-4 pt-4">
-          {reviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Hozircha sharhlar yo'q</p>
-          ) : (
-            reviews.map((review, i) => (
-              <div key={review._id || i} className="flex gap-3 border-b pb-4">
-                <Avatar fallback={(review.user?.name || review.name || "U")[0]} />
-                <div>
-                  <p className="text-sm font-medium">{review.user?.name || review.name || "Foydalanuvchi"}</p>
-                  <StarRating rating={review.rating} showValue={false} size={12} />
-                  <p className="mt-1 text-sm text-muted-foreground">{review.comment || review.text}</p>
-                </div>
-              </div>
-            ))
-          )}
+          <ProductReviews productId={id} />
         </TabsContent>
       </Tabs>
 

@@ -1,35 +1,21 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Truck, ShieldCheck, RotateCcw, ImageOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { SectionTitle } from "@/components/shared/SectionTitle";
-import { getBanners } from "@/services/api";
+import { useGetAllBannersQuery } from "@/store/api/bannerApi";
+import { getImageUrl } from "@/lib/utils";
 import { useGetAllCategoriesQuery } from "@/store/api/categoryApi/categoryApi";
 import { useGetAllProductsQuery } from "@/store/api/productApi/productApi";
 export default function Home() {
-  const [banners, setBanners] = useState([]);
-  const [loadingBanners, setLoadingBanners] = useState(true);
+  const { data: bannersResponse, isLoading: loadingBanners } = useGetAllBannersQuery();
+  const banners = bannersResponse?.data || [];
   const { data: categoriesResponse, isLoading: loadingCategories } =
     useGetAllCategoriesQuery(undefined, { refetchOnMountOrArgChange: true });
-  const categories = categoriesResponse?.data || [];
+  const categories = (categoriesResponse?.data || []).filter(category => category.isActive !== false);
   const { data: productsResponse, isLoading: loadingProducts } =
     useGetAllProductsQuery();
   const products = productsResponse?.data || [];
-  useEffect(() => {
-    const fetchBanners = async () => {
-      try {
-        const response = await getBanners();
-        const bannerList = response?.data || [];
-        setBanners(bannerList);
-      } catch (error) {
-        console.error("Bannerlarni olishda xatolik:", error);
-      } finally {
-        setLoadingBanners(false);
-      }
-    };
-    fetchBanners();
-  }, []);
   return (
     <div className="flex flex-col gap-10">
       {" "}
@@ -54,7 +40,7 @@ export default function Home() {
               {" "}
               {banners[0].image ? (
                 <img
-                  src={banners[0].image}
+                  src={getImageUrl(banners[0].image)}
                   alt={banners[0].title}
                   className="absolute inset-0 size-full object-cover"
                 />
@@ -78,7 +64,7 @@ export default function Home() {
                   {" "}
                   {banner.image ? (
                     <img
-                      src={banner.image}
+                      src={getImageUrl(banner.image)}
                       alt={banner.title}
                       className="absolute inset-0 size-full object-cover"
                     />
@@ -159,7 +145,7 @@ export default function Home() {
                   {" "}
                   <div className="flex size-10 items-center justify-center rounded-full bg-secondary">
                     {" "}
-                    <ImageOff className="size-5 text-muted-foreground/50" />{" "}
+                    {cat.image ? <img src={getImageUrl(cat.image)} alt={cat.name} className="size-10 rounded-full object-cover" /> : <ImageOff className="size-5 text-muted-foreground/50" />}{" "}
                   </div>{" "}
                   <span className="line-clamp-2 text-xs font-medium">
                     {" "}

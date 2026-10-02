@@ -1,214 +1,83 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { SlidersHorizontal, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { ProductCard } from "@/components/shared/ProductCard";
-import { useGetAllCategoriesQuery } from "@/store/api/categoryApi/categoryApi";
-import { useGetAllProductsQuery } from "@/store/api/productApi/productApi";
+import { Pagination } from "@/components/shared/Pagination";
+import { useGetAllCategoriesQuery } from "@/store/api/categoryApi";
+import { useGetAllProductsQuery } from "@/store/api/productApi";
+import { buildCatalogQuery } from "@/lib/catalog";
 
-function FiltersPanel({ categories, selectedSlug, onSelectCategory }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h3 className="mb-3 text-sm font-semibold">Kategoriya</h3>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              className="size-3.5 accent-primary"
-              checked={!selectedSlug}
-              onChange={() => onSelectCategory("")}
-            />
-            Barchasi
-          </label>
-          {categories.map((cat) => (
-            <label key={cat._id} className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                className="size-3.5 accent-primary"
-                checked={selectedSlug === cat.slug}
-                onChange={() => onSelectCategory(selectedSlug === cat.slug ? "" : cat.slug)}
-              />
-              {cat.name}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-
-      <div>
-        <h3 className="mb-3 text-sm font-semibold">Narx oralig'i</h3>
-        <div className="flex items-center gap-2">
-          <Input placeholder="Dan" type="number" />
-          <span className="text-muted-foreground">—</span>
-          <Input placeholder="Gacha" type="number" />
-        </div>
-      </div>
+function Filters({ categories, selected, params, onChange }) {
+  const [min, setMin] = useState(params.get("minPrice") || "");
+  const [max, setMax] = useState(params.get("maxPrice") || "");
+  const [error, setError] = useState("");
+  return <div className="space-y-6">
+    <div><h3 className="mb-3 font-semibold">Kategoriya</h3>
+      <label className="mb-2 flex gap-2"><input type="radio" checked={!selected} onChange={() => onChange({ category: "" })} />Barchasi</label>
+      {categories.map(cat => <label key={cat._id} className="mb-2 flex gap-2 text-sm"><input type="radio" checked={selected === cat.slug || selected === cat._id} onChange={() => onChange({ category: cat.slug })} />{cat.name}</label>)}
     </div>
-  );
+    <form className="space-y-2" onSubmit={e => {
+      e.preventDefault();
+      if (min !== "" && max !== "" && Number(min) > Number(max)) { setError("Boshlang‘ich narx oxirgi narxdan oshmasin"); return; }
+      setError(""); onChange({ minPrice: min, maxPrice: max });
+    }}>
+      <h3 className="font-semibold">Narx oralig‘i</h3>
+      <Label>Dan<Input aria-label="Minimal narx" type="number" min="0" value={min} onChange={e => setMin(e.target.value)} /></Label>
+      <Label>Gacha<Input aria-label="Maksimal narx" type="number" min="0" value={max} onChange={e => setMax(e.target.value)} /></Label>
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+      <Button type="submit" variant="outline" size="sm">Qo‘llash</Button>
+    </form>
+  </div>;
 }
 
 export default function Catalog() {
   const [showFilters, setShowFilters] = useState(false);
-  const [sort, setSort] = useState("new");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedSlug = searchParams.get("category") || "";
-
-  const {
-    data: categoriesResponse,
-    isLoading: loadingCategories,
-  } = useGetAllCategoriesQuery();
-  const categories = categoriesResponse?.data || [];
-
-  const {
-    data: productsResponse,
-    isLoading: loadingProducts,
-    isError: isProductsError,
-  } = useGetAllProductsQuery();
-
-  const onSelectCategory = (slug) => {
-    const next = new URLSearchParams(searchParams);
-    if (!slug) {
-      next.delete("category");
-    } else {
-      next.set("category", slug);
+  const [params, setParams] = useSearchParams();
+  const { categorySlug } = useParams();
+  const selected = params.has("category") ? params.get("category") : categorySlug || "";
+  const { data: categoriesResponse, isLoading: loadingCategories, isError: categoriesError, refetch: refetchCategories } = useGetAllCategoriesQuery();
+  const categories = (categoriesResponse?.data || []).filter(category => category.isActive !== false);
+  const category = categories.find(cat => cat.slug === selected || cat._id === selected);
+  const unknownCategory = Boolean(selected) && !loadingCategories && !category;
+  const query = buildCatalogQuery(params, category?._id);
+  const { currentData: response, isFetching, isError, refetch } = useGetAllProductsQuery(query, {
+    skip: Boolean(selected) && (loadingCategories || categoriesError || unknownCategory),
+  });
+  const change = (updates) => {
+    const next = new URLSearchParams(params);
+    // Keep the effective category when using legacy /catalog/:slug links.
+    if (categorySlug && !next.has("category")) next.set("category", categorySlug);
+    next.delete("page");
+    for (const [key, value] of Object.entries(updates)) {
+      if (key === "category") next.set(key, value); // Empty explicitly clears a path category.
+      else if (value === "") next.delete(key);
+      else next.set(key, value);
     }
-    setSearchParams(next);
+    setParams(next);
   };
-
-  const visibleProducts = useMemo(() => {
-    const products = productsResponse?.data || [];
-
-    let list = selectedSlug
-      ? products.filter((product) => {
-          const categorySlug =
-            typeof product.category === "object" ? product.category?.slug : undefined;
-          return categorySlug === selectedSlug || product.category === selectedSlug;
-        })
-      : products;
-
-    switch (sort) {
-      case "cheap":
-        list = [...list].sort((a, b) => a.price - b.price);
-        break;
-      case "expensive":
-        list = [...list].sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case "new":
-      default:
-        list = [...list].sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
-        );
-        break;
-    }
-
-    return list;
-  }, [productsResponse, selectedSlug, sort]);
-
-  return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Katalog</h1>
-          <p className="text-sm text-muted-foreground">
-            {loadingProducts ? "Yuklanmoqda..." : `${visibleProducts.length} ta mahsulot topildi`}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setShowFilters(true)}
-          >
-            <SlidersHorizontal className="size-4" />
-            Filtrlar
-          </Button>
-
-          <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="new">Yangi kelganlar</SelectItem>
-              <SelectItem value="cheap">Arzon narx bo'yicha</SelectItem>
-              <SelectItem value="expensive">Qimmat narx bo'yicha</SelectItem>
-              <SelectItem value="rating">Reyting bo'yicha</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
-        <Card className="hidden h-fit p-4 lg:block">
-          {loadingCategories ? (
-            <p className="text-sm text-muted-foreground">Kategoriyalar yuklanmoqda...</p>
-          ) : (
-            <FiltersPanel
-              categories={categories}
-              selectedSlug={selectedSlug}
-              onSelectCategory={onSelectCategory}
-            />
-          )}
-        </Card>
-
-        {showFilters && (
-          <div className="fixed inset-0 z-50 flex lg:hidden">
-            <div className="absolute inset-0 bg-black/50" onClick={() => setShowFilters(false)} />
-            <div className="relative ml-auto flex h-full w-72 flex-col overflow-y-auto bg-background p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-semibold">Filtrlar</h3>
-                <button onClick={() => setShowFilters(false)}>
-                  <X className="size-5" />
-                </button>
-              </div>
-              <FiltersPanel
-                categories={categories}
-                selectedSlug={selectedSlug}
-                onSelectCategory={(slug) => {
-                  onSelectCategory(slug);
-                  setShowFilters(false);
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {loadingProducts ? (
-            <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
-              Mahsulotlar yuklanmoqda...
-            </p>
-          ) : isProductsError ? (
-            <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
-              Ma'lumotlarni yuklashda xatolik yuz berdi
-            </p>
-          ) : visibleProducts.length === 0 ? (
-            <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
-              Mahsulotlar topilmadi
-            </p>
-          ) : (
-            visibleProducts.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))
-          )}
-        </div>
+  const products = response?.data || [];
+  const busy = isFetching || (Boolean(selected) && loadingCategories);
+  const filters = <Filters key={`${params.get("minPrice")}|${params.get("maxPrice")}`} categories={categories} selected={selected} params={params} onChange={change} />;
+  return <div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div><h1 className="text-xl font-semibold">Katalog</h1><p className="text-sm text-muted-foreground">{params.get("search") && `“${params.get("search")}” — `}{busy ? "Yuklanmoqda..." : `${unknownCategory ? 0 : response?.pagination?.total || 0} ta mahsulot`}</p></div>
+      <div className="flex gap-2"><Button variant="outline" className="lg:hidden" onClick={() => setShowFilters(true)}><SlidersHorizontal className="size-4" />Filtrlar</Button>
+        <select aria-label="Saralash" className="rounded-md border bg-background p-2 text-sm" value={params.get("sort") || "new"} onChange={e => change({ sort: e.target.value })}>
+          <option value="new">Yangi kelganlar</option><option value="cheap">Arzon narx bo‘yicha</option><option value="expensive">Qimmat narx bo‘yicha</option><option value="rating">Reyting bo‘yicha</option>
+        </select>
       </div>
     </div>
-  );
+    <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <Card className="hidden h-fit p-4 lg:block">{loadingCategories ? "Kategoriyalar yuklanmoqda..." : categoriesError ? <p role="alert">Kategoriyalarni yuklab bo‘lmadi</p> : filters}</Card>
+      {showFilters && <div className="fixed inset-0 z-50 flex lg:hidden"><button aria-label="Filtrlarni yopish" className="absolute inset-0 bg-black/50" onClick={() => setShowFilters(false)} /><div className="relative ml-auto h-full w-72 space-y-4 overflow-y-auto bg-background p-4"><Button variant="ghost" size="icon" aria-label="Yopish" onClick={() => setShowFilters(false)}><X /></Button>{filters}</div></div>}
+      <div>
+        {busy ? <p className="py-12 text-center">Mahsulotlar yuklanmoqda...</p> : isError || (selected && categoriesError) ? <div role="alert" className="py-12 text-center"><p>Ma’lumotlarni yuklab bo‘lmadi</p><Button onClick={selected && categoriesError ? refetchCategories : refetch}>Qayta urinish</Button></div> : unknownCategory || products.length === 0 ? <p className="py-12 text-center">Mahsulotlar topilmadi</p> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{products.map(product => <ProductCard key={product._id} product={product} />)}</div>}
+        {!unknownCategory && !isError && <Pagination pagination={response?.pagination} disabled={busy} onPageChange={page => { const next = new URLSearchParams(params); next.set("page", page); setParams(next); }} />}
+      </div>
+    </div>
+  </div>;
 }

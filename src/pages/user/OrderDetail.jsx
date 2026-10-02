@@ -1,12 +1,14 @@
+import toast from "react-hot-toast";
+import { getApiErrorMessage } from "@/lib/auth";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, MapPin, CreditCard } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { orderStatusLabels } from "@/data/mockData";
+import { orderStatusLabels } from "@/constants/orders";
 import { formatPrice } from "@/lib/utils";
-import { useGetSingleOrderQuery } from "@/store/api/orderApi/orderApi";
+import { useGetSingleOrderQuery, useCancelOrderMutation } from "@/store/api/orderApi/orderApi";
 import { useAuth } from "@/hooks/useAuth";
 
 const steps = ["pending", "processing", "shipped", "delivered"];
@@ -19,6 +21,8 @@ export default function OrderDetail() {
   const { data: orderResponse, isLoading, isError } = useGetSingleOrderQuery(id, {
     skip: !id || !isAuthenticated,
   });
+
+  const [cancelOrder, { isLoading: isCancelling }] = useCancelOrderMutation();
 
   if (isLoading) {
     return (
@@ -100,7 +104,8 @@ export default function OrderDetail() {
           <MapPin className="mt-0.5 size-4 text-muted-foreground" />
           <div>
             <p className="font-medium">Yetkazib berish manzili</p>
-            <p className="text-muted-foreground">{order.address || "Manzil ko'rsatilmagan"}</p>
+            <p>{order.address?.fullName} {order.address?.phone}</p>
+            <p className="text-muted-foreground">{order.address ? [order.address.region, order.address.district, order.address.street].filter(Boolean).join(", ") : "Manzil ko‘rsatilmagan"}</p>
           </div>
         </div>
 
@@ -120,6 +125,11 @@ export default function OrderDetail() {
           <span>Jami</span>
           <span>{formatPrice(order.totalPrice || order.total || 0)}</span>
         </div>
+        {['pending', 'processing'].includes(order.status) && <Button variant="destructive" className="mt-5" disabled={isCancelling} onClick={async () => {
+          if (isCancelling || !window.confirm("Buyurtmani bekor qilishni xohlaysizmi?")) return;
+          try { await cancelOrder(id).unwrap(); toast.success("Buyurtma bekor qilindi"); }
+          catch (error) { toast.error(getApiErrorMessage(error, "Buyurtmani bekor qilib bo‘lmadi")); }
+        }}>{isCancelling ? "Bekor qilinmoqda..." : "Buyurtmani bekor qilish"}</Button>}
       </Card>
     </div>
   );

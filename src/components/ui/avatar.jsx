@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 function Avatar({ className, src, alt = "", fallback = "", ...props }) {
-  const [errored, setErrored] = React.useState(false);
+  const [failedSrc, setFailedSrc] = React.useState(null);
 
   return (
     <div
@@ -13,12 +13,12 @@ function Avatar({ className, src, alt = "", fallback = "", ...props }) {
       )}
       {...props}
     >
-      {src && !errored ? (
+      {src && src !== failedSrc ? (
         <img
           src={src}
           alt={alt}
           className="aspect-square size-full object-cover"
-          onError={() => setErrored(true)}
+          onError={() => setFailedSrc(src)}
         />
       ) : (
         <span>{fallback}</span>

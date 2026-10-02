@@ -1,3 +1,4 @@
+import { useGetMyAddressesQuery } from "@/store/api/addressApi";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -11,7 +12,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { cn, formatPrice, getDiscountedPrice } from "@/lib/utils";
 import {
   useGetMyCartQuery,
-  useClearCartMutation,
+  useIsCartQuantityPending,
 } from "@/store/api/cartApi/cartApi";
 import { useCreateOrderMutation } from "@/store/api/orderApi/orderApi";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,11 +32,14 @@ const paymentMethods = [
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const isUpdatingQuantity = useIsCartQuantityPending();
   const { isAuthenticated } = useAuth();
 
   const {
     data: cartResponse,
     isLoading,
+    isFetching,
+    isError,
   } = useGetMyCartQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -43,7 +47,8 @@ export default function Checkout() {
   const [createOrder, { isLoading: isSubmitting }] =
     useCreateOrderMutation();
 
-  const [clearCart] = useClearCartMutation();
+
+  const { data: addressResponse } = useGetMyAddressesQuery(undefined, { skip: !isAuthenticated });
 
   const [selectedPayment, setSelectedPayment] = useState("cash");
 
@@ -75,11 +80,13 @@ export default function Checkout() {
     );
   }
 
+  if (isError) return <p role="alert" className="py-16 text-center text-destructive">Savatchani yuklab bo‘lmadi</p>;
+
   const cart = cartResponse?.data;
 
   const items = (cart?.items || cart?.products || [])
     .map((entry) => ({
-      product: entry.product || entry,
+      product: entry.product,
       quantity: entry.quantity ?? 1,
     }))
     .filter((entry) => entry.product);
@@ -148,6 +155,7 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting || isUpdatingQuantity || isFetching) return;
 
     if (
       !contact.fullName.trim() ||
@@ -166,7 +174,7 @@ export default function Checkout() {
     }
 
     try {
-      await createOrder({
+      const result = await createOrder({
         address: {
           fullName: contact.fullName.trim(),
           phone: `+998${contact.phone}`,
@@ -178,16 +186,9 @@ export default function Checkout() {
         paymentMethod: selectedPayment,
       }).unwrap();
 
-      try {
-        await clearCart().unwrap();
-      } catch {
-        // Backend order yaratib bo'lgan bo'lsa,
-        // savatchani tozalashdagi xatolik muhim emas.
-      }
-
       toast.success("Buyurtma muvaffaqiyatli qabul qilindi");
 
-      navigate("/orders");
+      navigate(result.data?._id ? `/orders/${result.data._id}` : "/orders");
     } catch (error) {
       console.error("CREATE ORDER ERROR:", error);
 
@@ -216,6 +217,12 @@ export default function Checkout() {
               Yetkazib berish manzili
             </h3>
 
+            {(addressResponse?.data || []).length > 0 && <div className="mb-4"><Label htmlFor="saved-address">Saqlangan manzil</Label><select id="saved-address" defaultValue="" className="mt-2 w-full rounded-md border bg-background p-2" onChange={e => {
+              const address = addressResponse.data.find(item => item._id === e.target.value);
+              if (!address) return;
+              const digits = address.phone.replace(/\D/g, '');
+              setContact({ fullName: address.fullName, phone: (digits.startsWith('998') ? digits.slice(3) : digits).slice(0, 9), region: address.region, district: address.district, street: address.street });
+            }}><option value="">Manzilni tanlang</option>{addressResponse.data.map(address => <option key={address._id} value={address._id}>{address.region}, {address.street}</option>)}</select></div>}
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label>Viloyat</Label>
@@ -378,11 +385,13 @@ export default function Checkout() {
             type="submit"
             size="lg"
             className="mt-4 w-full"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUpdatingQuantity || isFetching}
           >
-            {isSubmitting
-              ? "Yuborilmoqda..."
-              : "Buyurtmani tasdiqlash"}
+            {isUpdatingQuantity || isFetching
+              ? "Miqdor saqlanmoqda..."
+              : isSubmitting
+                ? "Yuborilmoqda..."
+                : "Buyurtmani tasdiqlash"}
           </Button>
         </Card>
       </form>

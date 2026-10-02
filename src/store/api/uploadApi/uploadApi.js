@@ -1,8 +1,21 @@
 import { baseApi } from "../baseApi/baseApi";
-// import { UPLOAD_PATH } from "./path";
+import { UPLOAD_PATH } from "./path";
 
-// TODO (talaba uchun): uploadFile, uploadFiles (FormData bilan)
 export const uploadApi = baseApi.injectEndpoints({
-  endpoints: () => ({}),
+  endpoints: (builder) => ({
+    uploadFile: builder.mutation({
+      query: (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        return {
+          url: UPLOAD_PATH.FILE,
+          method: "POST",
+          body: formData,
+        };
+      },
+    }),
+  }),
 });
 
+export const { useUploadFileMutation } = uploadApi;

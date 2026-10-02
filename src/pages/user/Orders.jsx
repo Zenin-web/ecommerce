@@ -1,10 +1,12 @@
+import { useState } from "react";
+import { Pagination } from "@/components/shared/Pagination";
 import { Link } from "react-router-dom";
 import { Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { orderStatusLabels } from "@/data/mockData";
+import { orderStatusLabels } from "@/constants/orders";
 import { formatPrice } from "@/lib/utils";
 import { useGetMyOrdersQuery } from "@/store/api/orderApi/orderApi";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +15,8 @@ const fallbackStatus = { label: "Kutilmoqda", variant: "secondary" };
 
 export default function Orders() {
   const { isAuthenticated } = useAuth();
-  const { data: ordersResponse, isLoading, isError } = useGetMyOrdersQuery(undefined, {
+  const [page, setPage] = useState(1);
+  const { data: ordersResponse, isLoading, isError } = useGetMyOrdersQuery({ page, limit: 10 }, {
     skip: !isAuthenticated,
   });
 
@@ -45,7 +48,7 @@ export default function Orders() {
 
   const orders = ordersResponse?.data || [];
 
-  if (orders.length === 0) {
+  if (orders.length === 0 && page === 1) {
     return (
       <EmptyState
         icon={Package}
@@ -100,6 +103,7 @@ export default function Orders() {
           );
         })}
       </div>
+      <Pagination pagination={ordersResponse?.pagination} onPageChange={setPage} />
     </div>
   );
 }

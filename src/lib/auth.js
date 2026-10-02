@@ -1,20 +1,8 @@
 export const TOKEN_KEY = "token";
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
-export function isAuthenticated() {
-  return Boolean(getToken());
-}
+export { getToken, setToken, clearToken } from "@/hooks/useAuth";
+import { getToken } from "@/hooks/useAuth";
+export function isAuthenticated() { return Boolean(getToken()); }
 
 export function extractToken(response) {
   return response?.token || response?.accessToken || response?.data?.token;

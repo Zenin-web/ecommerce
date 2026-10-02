@@ -1,3 +1,5 @@
+import { baseApi } from "@/store/api/baseApi/baseApi";
+import { store } from "@/store/store";
 import { useSyncExternalStore } from "react";
 
 const TOKEN_KEY = "token";
@@ -9,7 +11,8 @@ function emitChange() {
 
 function subscribe(listener) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  window.addEventListener("storage", listener);
+  return () => { listeners.delete(listener); window.removeEventListener("storage", listener); };
 }
 
 function getSnapshot() {
@@ -18,11 +21,13 @@ function getSnapshot() {
 
 export function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token);
+  store.dispatch(baseApi.util.resetApiState());
   emitChange();
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  store.dispatch(baseApi.util.resetApiState());
   emitChange();
 }
 

@@ -10,10 +10,10 @@ export const orderApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: [API_TAGS.ORDER, API_TAGS.CART],
+      invalidatesTags: [API_TAGS.ORDER, API_TAGS.CART, API_TAGS.PRODUCT],
     }),
     getMyOrders: builder.query({
-      query: () => ORDER_PATH.GET_ALL_ME,
+      query: (params) => ({ url: ORDER_PATH.GET_ALL_ME, params }),
       providesTags: [API_TAGS.ORDER],
     }),
     getSingleOrder: builder.query({
@@ -25,7 +25,7 @@ export const orderApi = baseApi.injectEndpoints({
         url: ORDER_PATH.CANCEL(id),
         method: "PATCH",
       }),
-      invalidatesTags: [API_TAGS.ORDER],
+      invalidatesTags: [API_TAGS.ORDER, API_TAGS.PRODUCT],
     }),
   }),
 });
